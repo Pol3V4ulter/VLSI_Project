@@ -2,26 +2,27 @@
 // File Name   : 2 Phase Clock fsm_using_function.v  0 - 3 - 1 - 2 
 // with count hold input and odd output
 //-----------------------------------------------------
-module FSM (clka, clkb, inp, run, wai, loadData,readData,writeData,writeout, win,loseSig, state,count);
+module FSM (clka, clkb, inp, run, wai, loadData,readData,writeData,writeout, win,loseSig, state,count, restart);
 //-------------Input Ports-----------------------------
 input   clka, clkb, inp, run, wai,loseSig;
 //-------------Output Ports----------------------------
-output  state[2:0], loadData, readData, writeData,count[8:0],win,writeout;
+output  state[2:0], loadData, readData, writeData,count[8:0],win,writeout, restart;
 //-------------Input ports Data Type-------------------
 wire    clka, clkb, inp, run, wai, loseSig;
 //-------------Output Ports Data Type------------------
-reg     loadData, readData, writeData,win, writeout;  //state and count defined under Internal Variables
+reg     loadData, readData, writeData,win, writeou, restart;  //state and count defined under Internal Variables
 //Internal Constants--------------------------
 parameter SIZE = 3;
 parameter SIZE1 = 9;
 parameter SIZEC = 4;
 //parameter run= 3'b001, wai = 3'b101, NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
 //parameter LOAD= 3'b001, NOT = 3'b101, NOLOAD= 3'b010, RESTART = 3'b111, NORESTART = 3'b100;
-parameter IDLE = 3'b000, INPUT  = 3'b010, WAIT = 3'b101;
+parameter IDLE = 3'b000, INPUT  = 3'b010, WAIT = 3'b101, RESTART = 3'b111;
 parameter FIN = 9'b111111111, BEG = 9'b000000000, ONECYCLE = 9'b000001111, TWOCYCLE = 9'b100000000, ONEITER = 9'b000000001; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
 parameter WIN = 15'b110010111111111;
-parameter IREAD = 3'b011, IWRITE  = 3'b111, PAUSE = 3'b110, WRITEOUT = 3'b100, WIN1 = 3'b001, LOSE1 = 3'b010; // RUN= 3'b001, WAIT = 3'b101, FIN = 9'b111111111; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
+parameter IREAD = 3'b011, WRITEOUT = 3'b100, WIN1 = 3'b001, LOSE1 = 3'b010; // RUN= 3'b001, WAIT = 3'b101, FIN = 9'b111111111; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
 parameter FIN1 = 4'b1111;
+//parameter IWRITE  = 3'b111, PAUSE = 3'b110, 
 //-------------Internal Variables---------------------------
 reg   [SIZE-1:0]          state        ;// Seq part of the FSM
 wire   [SIZE-1:0]          temp_state   ;// Internal state reg
@@ -32,8 +33,8 @@ wire  [SIZE1-1:0]           temp_count ;
 reg   [SIZE1-1:0]         next_count   ;
 
 reg     [SIZE1-1:0]         countWait      ;
-wire  [SIZE1-1:0]           temp_countWait ;
-reg   [SIZE1-1:0]         next_countWait   ;
+wire  [SIZE1-1:0]           temp_countWait ; 
+reg   [SIZE1-1:0]         next_countWait   ; 
 
 reg     [SIZE-1:0]         countWriteout      ;
 wire  [SIZE-1:0]           temp_countWriteout ;
@@ -56,44 +57,43 @@ function [SIZE-1:0] fsm_function;
   case(state)
   IDLE: begin
     if (inp == 1'b1) begin
-        fsm_function = INPUT;
+        fsm_function = RESTART;
     end else if(run==1'b1) begin
-        if(loseSig|(countWait==WIN)) begin
-            fsm_function = PAUSE;
+        if(loseSig|(countWait==WIN)|wai) begin
+            fsm_function = WAIT;
 
 	//end else if  begin
         //    fsm_function = WRITEOUT;
 	
-	end else begin
+		end else begin
             fsm_function = IREAD;
         end
-    end else if(wai == 1'b1) begin
-        fsm_function = WAIT;
     end else begin
         fsm_function = IDLE;      
     end
     end
   INPUT: begin
-    //if (count>=ONECYCLE) begin
+    if (count>=ONECYCLE) begin
         fsm_function = WRITEOUT;
-    //end else begin
-    //    fsm_function = INPUT;
-    //end
+    end else begin
+        fsm_function = INPUT;
+    end
     end
   IREAD: begin
-    //if (count>=TWOCYCLE)begin
-	fsm_function = IWRITE;
-    //end else begin 
-    end
-  IWRITE: begin
-    //fsm_function = IREAD;
-    if (count[SIZEC-1:0]==ONECYCLE) begin
-        fsm_function = WRITEOUT;
-        //end
+    if (count>=TWOCYCLE)begin
+		fsm_function = WRITEOUT;
     end else begin
-        fsm_function = IREAD;
+    	fsm_function = IREAD; 
     end
-    end
+//  IWRITE: begin
+//    //fsm_function = IREAD;
+//    if (count[SIZEC-1:0]==ONECYCLE) begin
+//        fsm_function = WRITEOUT;
+//        //end
+//    end else begin
+//        fsm_function = IREAD;
+//    end
+//    end
   WRITEOUT: begin
     //if (countWriteout==FIN1) begin
         fsm_function = IDLE;
@@ -101,15 +101,15 @@ function [SIZE-1:0] fsm_function;
     //    fsm_function = WRITEOUT;
     //end
     end    
-  PAUSE : begin
-        if (countWait==WIN) begin
-            fsm_function = WIN1;
-	end else if (loseSig == 1'b1) begin
-	    fsm_function = LOSE1; 
-    	end else begin
-            fsm_function = PAUSE;
-    end
-    end
+//  PAUSE : begin
+//        if (countWait==WIN) begin
+//            fsm_function = WIN1;
+//	end else if (loseSig == 1'b1) begin
+//	    fsm_function = LOSE1; 
+//    	end else begin
+//            fsm_function = PAUSE;
+//    end
+//    end
   WIN1: begin
     if (inp == 1'b1) begin
         fsm_function = INPUT;
@@ -125,7 +125,11 @@ function [SIZE-1:0] fsm_function;
     end
     end
   WAIT: begin
-    if (wai == 1'b0)begin
+    if (loseSig == 1) begin
+    	fsm_function = LOSE1;
+    end else if (countWait==WIN) begin
+    	fsm_function = WIN1;
+    end else if (wai == 1'b0)begin
         fsm_function = IDLE;
     end else begin
        fsm_function = WAIT;
@@ -133,6 +137,9 @@ function [SIZE-1:0] fsm_function;
     end
   default: fsm_function = IDLE;
   endcase
+  RESTART: begin
+  	 fsm_function = INPUT;
+  end
 
 endfunction
 
@@ -251,66 +258,70 @@ begin : OUTPUT_LOGIC
   state <= next_state;
   case(next_state)
   INPUT: begin 
-       loadData = 1'b1;
-       readData = 1'b0; 
-       writeData = 1'b0;
-       writeout = 1'b0;
+       loadData <= 1'b1;
+       readData <= 1'b0; 
+       writeData <= 1'b0;
+       writeout <= 1'b0;
+       restart <= 1'b0;
        count <= next_count;
        countWriteout <= next_countWriteout;
        countWait <= next_countWait;
        end
    IREAD: begin
-       loadData = 1'b0;
-       readData = 1'b1; 
-       writeData = 1'b0;
+       loadData <= 1'b0;
+       readData <= 1'b1; 
+       writeData <= 1'b0;
        //count <= next_count;
        writeout = 1'b0;
+       restart <= 1'b0;
        end
-   IWRITE: begin
-       loadData = 1'b0;
-       readData = 1'b0; 
-       writeData = 1'b1;
-       count <= next_count;
-       end   
+   //IWRITE: begin
+   //    loadData = 1'b0;
+   //    readData = 1'b0; 
+   //    writeData = 1'b1;
+   //    count <= next_count;
+   //    end   
    WRITEOUT: begin
-       loadData = 1'b0;
-       readData = 1'b0; 
-       writeData = 1'b0;
-       writeout = 1'b1;
+       loadData <= 1'b0;
+       readData <= 1'b0; 
+       writeData <= 1'b0;
+       writeout <= 1'b1;
+       restart <= 1'b0;
        end     
-   PAUSE: begin
-       loadData = 1'b0;
-       readData = 1'b0; 
-       writeData = 1'b0;
-       writeout = 1'b0;
-       countWait <= next_countWait;
+   RESTART: begin
+       loadData <= 1'b0;
+       readData <= 1'b0; 
+       writeData <= 1'b0;
+       writeout <= 1'b0;
+       restart <= 1'b1;
+       //countWait <= next_countWait;
        end 
    WIN1: begin
-       loadData = 1'b0;
-       readData = 1'b0; 
-       writeData = 1'b0;
-       writeout = 1'b0;
-       win = 1'b1;
+       loadData <= 1'b0;
+       readData <= 1'b0; 
+       writeData <= 1'b0;
+       writeout <= 1'b0;
+       win <= 1'b1;
        end  
    LOSE1: begin
-       loadData = 1'b0;
-       readData = 1'b0; 
-       writeData = 1'b0;
-       writeout = 1'b0;
-       win = 1'b0;
+       loadData <= 1'b0;
+       readData <= 1'b0; 
+       writeData <= 1'b0;
+       writeout <= 1'b0;
+       win <= 1'b0;
        end         
   WAIT: begin
-       loadData = 1'b0;
-       readData = 1'b0; 
-       writeData = 1'b0;
-       writeout = 1'b0;
-       countWait = next_countWait;
-       end     
+       loadData <= 1'b0;
+       readData <= 1'b0; 
+       writeData <= 1'b0;
+       writeout <= 1'b0;
+       //countWait <= next_countWait; //I don't think we want to count while waiting?
+       end     						  //If we wait 49, then read/write once we don't want to win
   default: begin
-	loadData = 1'b0;
-	readData = 1'b0; 
-	writeData = 1'b0; 
-    writeout = 1'b0;
+	loadData <= 1'b0;
+	readData <= 1'b0; 
+	writeData <= 1'b0; 
+    writeout <= 1'b0;
     count <= BEG;
 	end
   endcase
