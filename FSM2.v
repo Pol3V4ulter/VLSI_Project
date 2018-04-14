@@ -10,7 +10,7 @@ output  state[2:0], loadData, readData, writeData,count[8:0],win,writeout, resta
 //-------------Input ports Data Type-------------------
 wire    clka, clkb, inp, run, wai, loseSig;
 //-------------Output Ports Data Type------------------
-reg     loadData, readData, writeData,win, writeou, restart;  //state and count defined under Internal Variables
+reg     loadData, readData, writeData,win, writeout, restart;  //state and count defined under Internal Variables
 //Internal Constants--------------------------
 parameter SIZE = 3;
 parameter SIZE1 = 9;
@@ -20,7 +20,7 @@ parameter SIZEC = 4;
 parameter IDLE = 3'b000, INPUT  = 3'b010, WAIT = 3'b101, RESTART = 3'b111;
 parameter FIN = 9'b111111111, BEG = 9'b000000000, ONECYCLE = 9'b000001111, TWOCYCLE = 9'b100000000, ONEITER = 9'b000000001; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
 parameter WIN = 15'b110010111111111;
-parameter IREAD = 3'b011, WRITEOUT = 3'b100, WIN1 = 3'b001, LOSE1 = 3'b010; // RUN= 3'b001, WAIT = 3'b101, FIN = 9'b111111111; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
+parameter IREAD = 3'b011, WRITEOUT = 3'b100, WIN1 = 3'b001, LOSE1 = 3'b110; // RUN= 3'b001, WAIT = 3'b101, FIN = 9'b111111111; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
 parameter FIN1 = 4'b1111;
 //parameter IWRITE  = 3'b111, PAUSE = 3'b110, 
 //-------------Internal Variables---------------------------
@@ -73,17 +73,18 @@ function [SIZE-1:0] fsm_function;
     end
     end
   INPUT: begin
-    if (count>=ONECYCLE) begin
+    //if (count>=ONECYCLE) begin
         fsm_function = WRITEOUT;
-    end else begin
-        fsm_function = INPUT;
-    end
+    //end else begin
+    //    fsm_function = INPUT;
+    //end
     end
   IREAD: begin
-    if (count>=TWOCYCLE)begin
+    if (count>=3'b100)begin				//temporary constant, to be replaced with TWOCYCLE
 		fsm_function = WRITEOUT;
     end else begin
     	fsm_function = IREAD; 
+    end
     end
 //  IWRITE: begin
 //    //fsm_function = IREAD;
@@ -95,10 +96,10 @@ function [SIZE-1:0] fsm_function;
 //    end
 //    end
   WRITEOUT: begin
-    //if (countWriteout==FIN1) begin
+    //if (countWriteout>2'b11) begin			//temporary constant, to be replaced with FIN
         fsm_function = IDLE;
     //end else begin
-    //    fsm_function = WRITEOUT;
+      //  fsm_function = WRITEOUT;
     //end
     end    
 //  PAUSE : begin
@@ -127,7 +128,7 @@ function [SIZE-1:0] fsm_function;
   WAIT: begin
     if (loseSig == 1) begin
     	fsm_function = LOSE1;
-    end else if (countWait==WIN) begin
+    end else if (countWait==2'b11) begin //constant to be replaced with WIN
     	fsm_function = WIN1;
     end else if (wai == 1'b0)begin
         fsm_function = IDLE;
@@ -135,11 +136,11 @@ function [SIZE-1:0] fsm_function;
        fsm_function = WAIT;
     end
     end
-  default: fsm_function = IDLE;
-  endcase
   RESTART: begin
   	 fsm_function = INPUT;
-  end
+	end
+  default: fsm_function = IDLE;
+  endcase
 
 endfunction
 
@@ -223,14 +224,14 @@ endfunction
 
 always @ (posedge clka)
 begin : FSM_SEQ
-  //win <=1'b1;
-  if (inp == 1'b1) begin
-    next_state <= INPUT;
-    next_count <= temp_count;
+  //if (inp == 1'b1) begin
+  //  next_state <= RESET;
+  //  next_count <= temp_count;
     //next_count <= BEG;
-    next_countWait <= BEG;
-    next_countWriteout <= BEG;
-  end else begin
+  //  next_countWait <= BEG;
+  //  next_countWriteout <= BEG;
+  //end else begin
+	begin
     next_state <= temp_state;
     next_count <= temp_count;
     next_countWait <= temp_countWait;
@@ -240,7 +241,7 @@ end
 
 //----------Seq Logic-----------------------------
 /*
-always @ (posedge clka)
+always @@ (posedge clka)
 begin : FSM_SEQ
   if (inp == 1'b1) begin
     next_state <= inp;
@@ -263,8 +264,9 @@ begin : OUTPUT_LOGIC
        writeData <= 1'b0;
        writeout <= 1'b0;
        restart <= 1'b0;
+	win <= 1'b0;
        count <= next_count;
-       countWriteout <= next_countWriteout;
+       countWriteout <= 1'b0;
        countWait <= next_countWait;
        end
    IREAD: begin
@@ -272,7 +274,7 @@ begin : OUTPUT_LOGIC
        readData <= 1'b1; 
        writeData <= 1'b0;
        //count <= next_count;
-       writeout = 1'b0;
+       writeout <= 1'b0;
        restart <= 1'b0;
        end
    //IWRITE: begin
@@ -286,14 +288,18 @@ begin : OUTPUT_LOGIC
        readData <= 1'b0; 
        writeData <= 1'b0;
        writeout <= 1'b1;
+       countWriteout <= next_countWriteout;
        restart <= 1'b0;
        end     
    RESTART: begin
        loadData <= 1'b0;
        readData <= 1'b0; 
        writeData <= 1'b0;
-       writeout <= 1'b0;
+       writeout <= 1'b0;	//we don't want to write until in writeout state, right?
        restart <= 1'b1;
+	win <= 1'b0;
+	count <= 1'b0;
+	//countWriteout <= 1'b0;
        //countWait <= next_countWait;
        end 
    WIN1: begin
@@ -322,14 +328,14 @@ begin : OUTPUT_LOGIC
 	readData <= 1'b0; 
 	writeData <= 1'b0; 
     writeout <= 1'b0;
-    count <= BEG;
+    //count <= BEG;
 	end
   endcase
 end // End Of Block OUTPUT_LOGIC
 
 //----------Output Logic
 /*
-always @ (posedge clkb)
+always @@ (posedge clkb)
 begin : OUTPUT_LOGIC
   state <= next_state;
   count <= next_count+1; //count +1;
@@ -363,9 +369,3 @@ begin : OUTPUT_LOGIC
 end // End Of Block OUTPUT_LOGIC
 */
 endmodule // End of Module FSM
-
-
-
-
-
-
