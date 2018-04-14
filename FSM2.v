@@ -273,7 +273,7 @@ begin : OUTPUT_LOGIC
        loadData <= 1'b0;
        readData <= 1'b1; 
        writeData <= 1'b0;
-       //count <= next_count;
+       count <= next_count;
        writeout <= 1'b0;
        restart <= 1'b0;
        end
