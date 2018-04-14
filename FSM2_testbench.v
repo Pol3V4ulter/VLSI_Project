@@ -453,6 +453,135 @@ in_clka = 0;
 #1
 in_clkb = 1;
 #1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+
+in_run = 0;
+in_inp = 1;
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_inp = 0;
+in_run = 1;
+in_wai = 1;
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+
+in_wai = 0;
+in_run = 0;
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
+in_clkb = 0;
+#1 
+in_clka = 1;
+#1 
+in_clka = 0;
+#1
+in_clkb = 1;
+#1
 $dumpvars;
 $display ("in_clka, in_clkb, in_inp, in_run, in_wai, in_loseSig");
 

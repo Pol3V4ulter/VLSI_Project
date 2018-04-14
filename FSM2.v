@@ -18,9 +18,9 @@ parameter SIZEC = 4;
 //parameter run= 3'b001, wai = 3'b101, NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
 //parameter LOAD= 3'b001, NOT = 3'b101, NOLOAD= 3'b010, RESTART = 3'b111, NORESTART = 3'b100;
 parameter IDLE = 3'b000, INPUT  = 3'b010, WAIT = 3'b101, RESTART = 3'b111;
-parameter FIN = 9'b111111111, BEG = 9'b000000000, ONECYCLE = 9'b000001111, TWOCYCLE = 9'b100000000, ONEITER = 9'b000000001; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
+parameter IREAD = 3'b011, WRITEOUT = 3'b100, WIN1 = 3'b001, LOSE1 = 3'b110;
+parameter FIN = 9'b111111111, BEG = 9'b000000000, ONECYCLE = 9'b000001111, TWOCYCLE = 9'b100000000, ONEITER = 9'b000000001; 
 parameter WIN = 15'b110010111111111;
-parameter IREAD = 3'b011, WRITEOUT = 3'b100, WIN1 = 3'b001, LOSE1 = 3'b110; // RUN= 3'b001, WAIT = 3'b101, FIN = 9'b111111111; // NOrun= 3'b010, inp = 3'b111, NOinp = 3'b100;
 parameter FIN1 = 4'b1111;
 //parameter IWRITE  = 3'b111, PAUSE = 3'b110, 
 //-------------Internal Variables---------------------------
@@ -41,7 +41,7 @@ wire  [SIZE-1:0]           temp_countWriteout ;
 reg   [SIZE-1:0]         next_countWriteout   ;
 //----------Code startes Here------------------------
 assign temp_state = fsm_function(state,count,inp, run, wai);
-assign temp_count = count_function(count);
+assign temp_count = count_function(count, state);
 assign temp_countWait = countWait + 1'b1;
 assign temp_countWriteout = countWriteout + 1'b1;
 
@@ -59,7 +59,7 @@ function [SIZE-1:0] fsm_function;
     if (inp == 1'b1) begin
         fsm_function = RESTART;
     end else if(run==1'b1) begin
-        if(loseSig|(countWait==WIN)|wai) begin
+        if(loseSig|(countWait>=8'b00001010)|wai) begin //constant to be replaced with WIN
             fsm_function = WAIT;
 
 	//end else if  begin
@@ -113,14 +113,14 @@ function [SIZE-1:0] fsm_function;
 //    end
   WIN1: begin
     if (inp == 1'b1) begin
-        fsm_function = INPUT;
+        fsm_function = RESTART;
     end else begin
         fsm_function = WIN1;      
     end
     end
   LOSE1: begin
     if (inp == 1'b1) begin
-        fsm_function = INPUT;
+        fsm_function = RESTART;
     end else begin
         fsm_function = LOSE1;      
     end
@@ -128,7 +128,7 @@ function [SIZE-1:0] fsm_function;
   WAIT: begin
     if (loseSig == 1) begin
     	fsm_function = LOSE1;
-    end else if (countWait==2'b11) begin //constant to be replaced with WIN
+    end else if (countWait>=8'b00001010) begin //constant to be replaced with WIN
     	fsm_function = WIN1;
     end else if (wai == 1'b0)begin
         fsm_function = IDLE;
@@ -193,16 +193,22 @@ endfunction
 //----------Function for Combo Logic-----------------
 function [SIZE1-1:0] count_function; //output is temp_count
   input  [SIZE1-1:0] count;
+  input  [SIZE - 1:0] state;
+  //input  [SIZE - 1:0] state;
   //input  hold;
   //input load;
   //input Not;temp_countWait
   //input restart;
-  case(count)
-  FIN: begin
-    count_function = BEG;
-    end
-  default: count_function = count+1'b1;
-  endcase
+  //case(count)
+//case(state)
+  // IREAD: begin
+case(state)
+    IREAD:begin
+  	count_function = count+1'b1;
+   	end
+    
+	default: count_function = BEG;
+endcase
 endfunction
 
 //----------Function for Combo Logic-----------------
@@ -265,24 +271,19 @@ begin : OUTPUT_LOGIC
        writeout <= 1'b0;
        restart <= 1'b0;
 	win <= 1'b0;
-       count <= next_count;
+	count <= next_count;
        countWriteout <= 1'b0;
-       countWait <= next_countWait;
+       
        end
    IREAD: begin
        loadData <= 1'b0;
        readData <= 1'b1; 
        writeData <= 1'b0;
        count <= next_count;
+       countWait <= next_countWait;
        writeout <= 1'b0;
        restart <= 1'b0;
        end
-   //IWRITE: begin
-   //    loadData = 1'b0;
-   //    readData = 1'b0; 
-   //    writeData = 1'b1;
-   //    count <= next_count;
-   //    end   
    WRITEOUT: begin
        loadData <= 1'b0;
        readData <= 1'b0; 
@@ -296,9 +297,10 @@ begin : OUTPUT_LOGIC
        readData <= 1'b0; 
        writeData <= 1'b0;
        writeout <= 1'b0;	//we don't want to write until in writeout state, right?
+       countWait <= 1'b0;
        restart <= 1'b1;
-	win <= 1'b0;
-	count <= 1'b0;
+       win <= 1'b0;
+       count <= 1'b0;
 	//countWriteout <= 1'b0;
        //countWait <= next_countWait;
        end 
