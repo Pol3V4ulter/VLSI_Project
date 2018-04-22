@@ -66,7 +66,7 @@ function [SIZE-1:0] fsm_function;
 	end else if(inp == 1'b1) begin
 		fsm_function = INPUT;
     end else if(run==1'b1) begin
-        if(loseSig|wai) begin //constant to be replaced with WIN
+        if(loseSig|wai|(timer5==1'b0)) begin //constant to be replaced with WIN
             fsm_function = WAIT;	
 		end else begin
             fsm_function = IREAD;
